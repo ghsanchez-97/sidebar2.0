@@ -1,0 +1,157 @@
+/* Palette definition */
+$palette-themes: (
+    main: (
+        primary: #004581,
+        secondary: #000,
+        accent: #000,
+        base: #ede9e8,
+        base-dark: #111318,
+        info: #000,
+        success: #00b01d,
+        warning: #f2b413,
+        danger: #f01e1e,
+        gray: #d2d4da,
+        gray-2: #9e9fa9,
+        gray-3: #5b5d6b,
+    ),
+    light: (
+        primary: #008abe,
+        secondary: #000,
+        accent: #000,
+        base: #ffffff,
+        base-dark: #1f222b,
+        info: #000,
+        success: #00e025,
+        warning: #f5c13d,
+        danger: #f45252,
+        gray: #e9eaed,
+        gray-2: #b3b5bc,
+        gray-3: #717384,
+    ),
+    dark: (
+        primary: #003666,
+        secondary: #000,
+        accent: #000,
+        base: #dbd4d1,
+        base-dark: #08090c,
+        info: #000,
+        success: #008f18,
+        warning: #d59c0b,
+        danger: #e60f0f,
+        gray: #bcbfc8,
+        gray-2: #888a96,
+        gray-3: #4b4d58,
+    ),
+);
+
+$palette-variation: 7;
+
+$palette-apply: (
+    bg: background-color,
+    font: color,
+    border: border-color,
+);
+
+$palette-by: 0.1;
+$palette-base: 0;
+
+$brand: tl;
+$default-theme: light;
+
+@mixin palette-root {
+    :root {
+        @each $key, $prop in $palette-apply {
+            --#{$brand}-#{$key}-opacity: 1;
+        }
+    }
+}
+
+@function palette($theme, $color, $function: null, $i: 0) {
+    @if not map-get($palette-themes, $theme) {
+        @error "No theme #{$theme} in palette";
+    }
+
+    @if not map-get(map-get($palette-themes, $theme), $color) {
+        @error "No color #{$color} in palette";
+    }
+
+    @if ($i < 0) {
+        @error "No level #{$i} in #{$color}";
+    }
+
+    @if ($i == 0) {
+        @return map-get(map-get($palette-themes, $theme), $color);
+    }
+
+    @if $palette-variation * $i > 100 {
+        @error "(variation * level) = #{$palette-variation * $i} cannot be greater than 100";
+    }
+
+    @return call(
+        get-function($function),
+        map-get(map-get($palette-themes, $theme), $color),
+        $palette-variation * $i * 1%
+    );
+}
+
+@function palette-light($theme, $color, $i) {
+    @return palette($theme, $color, lighten, $i);
+}
+
+@function palette-dark($theme, $color, $i) {
+    @return palette($theme, $color, darken, $i);
+}
+
+@mixin palette($keys...) {
+    @each $key, $theme, $color, $variant, $level in $keys {
+        @if not map-get($palette-apply, $key) {
+            @error "No key #{$key} in palette apply";
+        }
+
+        @if $variant == light or $variant == l {
+            @each $prop in map-get($palette-apply, $key) {
+                #{$prop}: palette-light($theme, $color, $level);
+                #{$prop}: rgba(
+                    palette-light($theme, $color, $level),
+                    var(--#{$brand}-#{$key}-opacity)
+                );
+            }
+        }
+        @elseif $variant == dark or $variant == d {
+            @each $prop in map-get($palette-apply, $key) {
+                #{$prop}: palette-dark($theme, $color, $level);
+                #{$prop}: rgba(
+                    palette-dark($theme, $color, $level),
+                    var(--#{$brand}-#{$key}-opacity)
+                );
+            }
+        } @else {
+            @each $prop in map-get($palette-apply, $key) {
+                #{$prop}: palette($theme, $color);
+                #{$prop}: rgba(
+                    palette($theme, $color),
+                    var(--#{$brand}-#{$key}-opacity)
+                );
+            }
+        }
+    }
+}
+
+@mixin opacity($keys...) {
+    @each $key, $opacity in $keys {
+        @if $key == opacity {
+            opacity: $palette-base + ($opacity * $palette-by);
+        } @else {
+            @if not map-get($palette-apply, $key) {
+                @error "No key #{$key} in palette apply opacity";
+            }
+
+            @if $opacity < 0 or $opacity * $palette-by > 100% {
+                @error "No opacity level #{$opacity} in #{$key}";
+            }
+
+            --#{$brand}-#{$key}-opacity: #{$palette-base +
+                ($opacity * $palette-by)};
+        }
+    }
+}
